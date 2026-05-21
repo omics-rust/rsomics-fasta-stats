@@ -2,11 +2,11 @@
 name = "rsomics-fasta-stats"
 version = "0.4.5"
 description = "Per-record statistics for FASTA files (num_seqs, sum_len, GC%, N50, …) — Rust port of `seqkit stats` (FASTA-only subset)."
-edition.workspace = true
-rust-version.workspace = true
-license.workspace = true
-repository.workspace = true
-authors.workspace = true
+edition = "2024"
+rust-version = "1.91"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/omics-rust/rsomics-world"
+authors = ["Zane Leong <efd@live.com>"]
 readme = "README.md"
 categories = ["science", "command-line-utilities"]
 keywords = ["fasta", "bioinformatics", "n50", "gc-content", "seqkit"]
@@ -16,24 +16,22 @@ name = "rsomics-fasta-stats"
 path = "src/main.rs"
 
 [dependencies]
-rsomics-common = { path = "../../../foundation/rsomics-common", version = "0.6" }
-rsomics-help = { path = "../../../foundation/rsomics-help", version = "0.3" }
-rsomics-seqstats = { path = "../../../foundation/rsomics-seqstats", version = "0.2" }
-clap = { workspace = true, features = ["derive"] }
-serde = { workspace = true, features = ["derive"] }
-serde_json.workspace = true
-anyhow.workspace = true
+rsomics-common = { version = "0.6" }
+rsomics-help = { version = "0.3" }
+rsomics-seqstats = { version = "0.2" }
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
 needletail = { version = "0.7", default-features = false, features = ["compression"] }
 memchr = "2"
 
 [dev-dependencies]
-rsomics-common = { path = "../../../foundation/rsomics-common", version = "0.6", features = ["test-support", "rayon"] }
+rsomics-common = { version = "0.6", features = ["test-support", "rayon"] }
 tempfile = "3"
-criterion.workspace = true
+criterion = { version = "0.7", default-features = false, features = ["cargo_bench_support"] }
 
 [[bench]]
 name = "fasta_stats"
 harness = false
 
-[lints]
-workspace = true

@@ -15,6 +15,11 @@ keywords = ["fasta", "bioinformatics", "n50", "gc-content", "seqkit"]
 name = "rsomics-fasta-stats"
 path = "src/main.rs"
 
+
+[lib]
+name = "rsomics_fasta_stats"
+path = "src/lib.rs"
+doctest = false
 [dependencies]
 rsomics-common = { version = "0.6" }
 rsomics-help = { version = "0.3" }

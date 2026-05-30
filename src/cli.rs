@@ -154,7 +154,7 @@ pub const HELP: HelpSpec = HelpSpec {
                 type_hint: Some("bool"),
                 required: false,
                 default: Some("false"),
-                description: "Emit AI-friendly JSON envelope on stdout",
+                description: "Emit JSON envelope on stdout",
                 why_default: None,
             },
             FlagSpec {
@@ -201,7 +201,6 @@ pub const HELP: HelpSpec = HelpSpec {
 mod tests {
     use clap::CommandFactory;
 
-    // debug_assert validates the full arg graph including flattened CommonFlags; only fires at binary parse time.
     #[test]
     fn cli_definition_is_valid() {
         super::Cli::command().debug_assert();

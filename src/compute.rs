@@ -75,7 +75,7 @@ pub fn compute_stats(path: &Path, cfg: &Config) -> Result<FastaStats> {
     let mut sum_n_nuc: u64 = 0;
     let mut sum_n_prot: u64 = 0;
 
-    // seqkit guesses `type` from the first record only; classify it inline.
+    // seqkit classifies from the first record only.
     let mut seq_type: Option<SeqType> = None;
 
     while let Some(record) = reader.next() {
@@ -110,8 +110,6 @@ pub fn compute_stats(path: &Path, cfg: &Config) -> Result<FastaStats> {
         }
     }
 
-    // `seq_type` is `None` exactly when there were no records — the
-    // first record always sets it (even an empty record ⇒ Unlimit).
     let Some(seq_type) = seq_type else {
         return Err(RsomicsError::InvalidInput(format!(
             "{} contained no FASTA records",

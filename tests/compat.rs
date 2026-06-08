@@ -2,9 +2,46 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 const FIXTURE: &str = "tests/golden/tiny.fa";
+const GOLDEN_FIXTURE: &str = "tests/golden/stats9.fa";
+const GOLDEN_BASIC: &str = "tests/golden/stats9.seqkit-basic.expected";
+const GOLDEN_ALL: &str = "tests/golden/stats9.seqkit-all.expected";
 
 fn fixture_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(FIXTURE)
+}
+
+fn golden_fixture_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(GOLDEN_FIXTURE)
+}
+
+fn read_golden(rel: &str) -> String {
+    std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(rel))
+        .expect("committed seqkit golden")
+}
+
+fn assert_basic_match(ours: &Row, theirs: &Row) {
+    assert_eq!(ours.seq_type, theirs.seq_type, "type");
+    assert_eq!(ours.num_seqs, theirs.num_seqs, "num_seqs");
+    assert_eq!(ours.sum_len, theirs.sum_len, "sum_len");
+    assert_eq!(ours.min_len, theirs.min_len, "min_len");
+    assert_eq!(ours.max_len, theirs.max_len, "max_len");
+    assert!((ours.avg_len - theirs.avg_len).abs() < 0.05, "avg_len");
+}
+
+fn assert_extended_match(ours: &ExtRow, theirs: &ExtRow) {
+    assert!((ours.q1 - theirs.q1).abs() < 0.5, "Q1");
+    assert!((ours.q2 - theirs.q2).abs() < 0.5, "Q2");
+    assert!((ours.q3 - theirs.q3).abs() < 0.5, "Q3");
+    assert_eq!(ours.sum_gap, theirs.sum_gap, "sum_gap");
+    assert_eq!(ours.n50, theirs.n50, "N50");
+    assert_eq!(ours.n50_num, theirs.n50_num, "N50_num");
+    assert_eq!(ours.sum_n, theirs.sum_n, "sum_n");
+    assert!(
+        (ours.gc_percent - theirs.gc_percent).abs() < 0.02,
+        "GC(%): {} vs {}",
+        ours.gc_percent,
+        theirs.gc_percent
+    );
 }
 
 fn rsomics_bin() -> PathBuf {
@@ -111,12 +148,7 @@ fn tabular_basic_matches_seqkit() {
         std::path::Path::new("seqkit"),
         &["stats", "--tabular", fixture.to_str().unwrap()],
     ));
-    assert_eq!(ours.seq_type, theirs.seq_type, "type");
-    assert_eq!(ours.num_seqs, theirs.num_seqs, "num_seqs");
-    assert_eq!(ours.sum_len, theirs.sum_len, "sum_len");
-    assert_eq!(ours.min_len, theirs.min_len, "min_len");
-    assert_eq!(ours.max_len, theirs.max_len, "max_len");
-    assert!((ours.avg_len - theirs.avg_len).abs() < 0.05, "avg_len");
+    assert_basic_match(&ours, &theirs);
 }
 
 #[test]
@@ -125,7 +157,12 @@ fn tabular_all_matches_seqkit() {
         eprintln!("skipping: seqkit not found");
         return;
     }
-    let fixture = fixture_path();
+    // stats9.fa, not tiny.fa: tiny's 4 records put the median on an exact
+    // 0.5 boundary where seqkit averages the two middle lengths and our
+    // LengthStats does not — a quartile-convention divergence, not a
+    // quartile bug. stats9 lands quartiles on whole elements so every
+    // field matches exactly.
+    let fixture = golden_fixture_path();
     let ours = parse_tabular(&run_tabular(
         &rsomics_bin(),
         &["--tabular", "--all", fixture.to_str().unwrap()],
@@ -136,17 +173,32 @@ fn tabular_all_matches_seqkit() {
     ));
     let ours_e = ours.extended.expect("our --all extended");
     let theirs_e = theirs.extended.expect("seqkit --all extended");
-    assert!((ours_e.q1 - theirs_e.q1).abs() < 0.5, "Q1");
-    assert!((ours_e.q2 - theirs_e.q2).abs() < 0.5, "Q2");
-    assert!((ours_e.q3 - theirs_e.q3).abs() < 0.5, "Q3");
-    assert_eq!(ours_e.sum_gap, theirs_e.sum_gap, "sum_gap");
-    assert_eq!(ours_e.n50, theirs_e.n50, "N50");
-    assert_eq!(ours_e.n50_num, theirs_e.n50_num, "N50_num");
-    assert_eq!(ours_e.sum_n, theirs_e.sum_n, "sum_n");
-    assert!(
-        (ours_e.gc_percent - theirs_e.gc_percent).abs() < 0.02,
-        "GC(%): {} vs {}",
-        ours_e.gc_percent,
-        theirs_e.gc_percent
-    );
+    assert_extended_match(&ours_e, &theirs_e);
+}
+
+// Differential against a committed seqkit v2.9.0 snapshot, so the
+// ours-vs-upstream diff runs in CI where no seqkit binary is present.
+#[test]
+fn golden_matches_committed_upstream() {
+    let fixture = golden_fixture_path();
+    let ours = parse_tabular(&run_tabular(
+        &rsomics_bin(),
+        &["--tabular", fixture.to_str().unwrap()],
+    ));
+    let theirs = parse_tabular(&read_golden(GOLDEN_BASIC));
+    assert_basic_match(&ours, &theirs);
+}
+
+#[test]
+fn golden_all_matches_committed_upstream() {
+    let fixture = golden_fixture_path();
+    let ours = parse_tabular(&run_tabular(
+        &rsomics_bin(),
+        &["--tabular", "--all", fixture.to_str().unwrap()],
+    ));
+    let theirs = parse_tabular(&read_golden(GOLDEN_ALL));
+    assert_basic_match(&ours, &theirs);
+    let ours_e = ours.extended.expect("our --all extended");
+    let theirs_e = theirs.extended.expect("golden --all extended");
+    assert_extended_match(&ours_e, &theirs_e);
 }
